@@ -325,12 +325,6 @@ Cross-correlates vitals and labs for sepsis indicators:
 
 ---
 
-## Team
-
-[Your team information here]
-
----
-
 ## Acknowledgments
 
 - MIMIC-IV dataset (PhysioNet)
