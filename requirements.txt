@@ -1,0 +1,19 @@
+# Kafka
+confluent-kafka>=2.3.0
+
+# Google Cloud
+#google-cloud-aiplatform>=1.38.1
+google-genai>=1.0.0
+google-auth==2.25.2
+
+# Data processing
+pandas==2.1.4
+numpy==1.26.2
+
+# Dashboard
+flask>=3.0.0
+flask-cors>=4.0.0
+
+# Utilities
+python-dotenv==1.0.0
+python-dateutil>=2.8.0

@@ -1,0 +1,33 @@
+# Credentials
+config.py
+.env
+.env.local
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Node
+node_modules/
+dist/
+.vercel/
+
+# Logs
+logs/
+*.log
+
+# Data files
+data/dashboard_data.json
+data/dashboard_data.json.tmp
+data/*.csv
+
+# OS
+.DS_Store
+
+# Old files
+*.old
+
+# Backup files
+*.backup

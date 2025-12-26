@@ -1,0 +1,5 @@
+{
+  "name": "Patient Deterioration Monitor",
+  "description": "Real-time ICU patient monitoring dashboard powered by MIMIC-IV and AI analysis.",
+  "requestFramePermissions": []
+}
