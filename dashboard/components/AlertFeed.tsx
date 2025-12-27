@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Alert, Patient } from '../types';
-import { Bell, CheckCircle, AlertTriangle, AlertOctagon, ArrowRight } from 'lucide-react';
+import { Bell, CheckCircle, AlertTriangle, AlertOctagon, ArrowRight, Filter } from 'lucide-react';
 
 interface AlertFeedProps {
   alerts: Alert[];
@@ -9,6 +9,14 @@ interface AlertFeedProps {
 }
 
 export const AlertFeed: React.FC<AlertFeedProps> = ({ alerts, onAcknowledge, onSelectPatient }) => {
+  const [showOnlyUnacked, setShowOnlyUnacked] = useState(false);
+
+  const filteredAlerts = showOnlyUnacked 
+    ? alerts.filter(a => !a.is_acknowledged)
+    : alerts;
+
+  const unackedCount = alerts.filter(a => !a.is_acknowledged).length;
+
   return (
     <div className="bg-slate-800 rounded-xl border border-slate-700 h-full flex flex-col">
       <div className="p-4 border-b border-slate-700 flex justify-between items-center">
@@ -16,18 +24,31 @@ export const AlertFeed: React.FC<AlertFeedProps> = ({ alerts, onAcknowledge, onS
           <Bell size={18} />
           Alert Feed
         </h3>
-        <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-          {alerts.filter(a => !a.is_acknowledged).length} New
-        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowOnlyUnacked(!showOnlyUnacked)}
+            className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg border transition-colors ${
+              showOnlyUnacked
+                ? 'bg-red-900/50 border-red-700 text-red-300'
+                : 'bg-slate-700 border-slate-600 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Filter size={12} />
+            {showOnlyUnacked ? 'Unacked Only' : 'All'}
+          </button>
+          <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+            {unackedCount} New
+          </span>
+        </div>
       </div>
       
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {alerts.length === 0 ? (
+        {filteredAlerts.length === 0 ? (
           <div className="text-center text-slate-500 py-10 text-sm">
-            No active alerts
+            {showOnlyUnacked ? 'No unacknowledged alerts' : 'No active alerts'}
           </div>
         ) : (
-          alerts.map(alert => (
+          filteredAlerts.map(alert => (
             <div 
               key={alert.id}
               className={`
