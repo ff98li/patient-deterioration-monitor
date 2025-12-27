@@ -18,6 +18,7 @@ CORS(app, origins=[
     'http://localhost:3000', 
     'http://127.0.0.1:5173',
     'https://patient-dashboard-1083710664698.us-central1.run.app',
+    'https://icu.ffli.dev',
     'https://*.run.app',
 ])
 
