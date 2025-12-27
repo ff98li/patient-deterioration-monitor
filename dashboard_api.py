@@ -17,8 +17,8 @@ CORS(app, origins=[
     'http://localhost:5173', 
     'http://localhost:3000', 
     'http://127.0.0.1:5173',
+    'https://patient-dashboard-1083710664698.us-central1.run.app',
     'https://*.run.app',
-    'https://patient-deterioration-monitor.ffli.dev'
 ])
 
 
