@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Activity, Users, AlertOctagon, HeartPulse, Zap, WifiOff } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Activity, Users, AlertOctagon, HeartPulse, Zap, WifiOff, Search, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 
-import { Patient, Alert, DashboardStats } from './types';
+import { Patient, Alert, DashboardStats, RiskLevel, ConfidenceLevel } from './types';
 import { fetchDashboardData, acknowledgeAlert as apiAcknowledgeAlert, checkApiHealth } from './services/apiService';
 import { generateMockData } from './services/mockDataService';
 
@@ -12,6 +12,7 @@ import { PatientDetailModal } from './components/PatientDetailModal';
 import { RiskChart } from './components/RiskChart';
 
 const REFRESH_INTERVAL = 2000; // 2 seconds
+const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
 const App: React.FC = () => {
   // State
@@ -22,6 +23,51 @@ const App: React.FC = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [useRealApi, setUseRealApi] = useState<boolean>(true);
   const [apiError, setApiError] = useState<string | null>(null);
+
+  // Filter & Pagination State
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [riskFilter, setRiskFilter] = useState<RiskLevel | 'ALL'>('ALL');
+  const [confidenceFilter, setConfidenceFilter] = useState<ConfidenceLevel | 'ALL'>('ALL');
+  const [pageSize, setPageSize] = useState<number>(25);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [showFilters, setShowFilters] = useState<boolean>(false);
+
+  // Filtered and paginated patients
+  const filteredPatients = useMemo(() => {
+    return patients.filter(patient => {
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesId = patient.stay_id.toString().includes(query) || 
+                          patient.subject_id.toString().includes(query);
+        if (!matchesId) return false;
+      }
+      
+      // Risk level filter
+      if (riskFilter !== 'ALL' && patient.risk_level !== riskFilter) {
+        return false;
+      }
+      
+      // Confidence level filter
+      if (confidenceFilter !== 'ALL' && patient.ai_confidence !== confidenceFilter) {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [patients, searchQuery, riskFilter, confidenceFilter]);
+
+  const totalPages = Math.ceil(filteredPatients.length / pageSize);
+  
+  const paginatedPatients = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredPatients.slice(startIndex, startIndex + pageSize);
+  }, [filteredPatients, currentPage, pageSize]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, riskFilter, confidenceFilter, pageSize]);
 
   // Fetch data from API or fall back to mock
   const fetchData = useCallback(async () => {
@@ -112,6 +158,15 @@ const App: React.FC = () => {
     setUseRealApi(prev => !prev);
     setApiError(null);
   };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchQuery('');
+    setRiskFilter('ALL');
+    setConfidenceFilter('ALL');
+  };
+
+  const hasActiveFilters = searchQuery || riskFilter !== 'ALL' || confidenceFilter !== 'ALL';
 
   if (!stats) {
     return (
@@ -207,24 +262,133 @@ const App: React.FC = () => {
       </div>
 
       {/* Main Grid */}
-      <div className="grid grid-cols-12 gap-6 h-[calc(100vh-280px)]">
+      <div className="grid grid-cols-12 gap-6">
         
         {/* Left Col: Patient List */}
-        <div className="col-span-12 lg:col-span-7 flex flex-col h-full">
+        <div className="col-span-12 lg:col-span-7 flex flex-col">
            <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-slate-100">Patient Status</h2>
-              <div className="text-xs text-slate-500 bg-slate-900 px-3 py-1 rounded">Sorted by Risk Severity</div>
+              <div className="text-xs text-slate-500 bg-slate-900 px-3 py-1 rounded">
+                Showing {paginatedPatients.length} of {filteredPatients.length} patients
+              </div>
+           </div>
+
+           {/* Search & Filter Bar */}
+           <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 mb-4">
+             <div className="flex flex-wrap gap-3 items-center">
+               {/* Search */}
+               <div className="relative flex-1 min-w-[200px]">
+                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                 <input
+                   type="text"
+                   placeholder="Search by Patient ID..."
+                   value={searchQuery}
+                   onChange={(e) => setSearchQuery(e.target.value)}
+                   className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                 />
+               </div>
+
+               {/* Filter Toggle */}
+               <button
+                 onClick={() => setShowFilters(!showFilters)}
+                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm border transition-colors ${
+                   showFilters || hasActiveFilters
+                     ? 'bg-blue-900/50 border-blue-700 text-blue-300'
+                     : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200'
+                 }`}
+               >
+                 <Filter size={16} />
+                 Filters
+                 {hasActiveFilters && (
+                   <span className="bg-blue-500 text-white text-xs px-1.5 rounded-full">!</span>
+                 )}
+               </button>
+
+               {/* Page Size */}
+               <div className="flex items-center gap-2">
+                 <span className="text-xs text-slate-500">Show:</span>
+                 <select
+                   value={pageSize}
+                   onChange={(e) => setPageSize(Number(e.target.value))}
+                   className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                 >
+                   {PAGE_SIZE_OPTIONS.map(size => (
+                     <option key={size} value={size}>{size}</option>
+                   ))}
+                 </select>
+               </div>
+             </div>
+
+             {/* Expanded Filters */}
+             {showFilters && (
+               <div className="flex flex-wrap gap-3 items-center mt-3 pt-3 border-t border-slate-800">
+                 {/* Risk Level Filter */}
+                 <div className="flex items-center gap-2">
+                   <span className="text-xs text-slate-500">Risk:</span>
+                   <select
+                     value={riskFilter}
+                     onChange={(e) => setRiskFilter(e.target.value as RiskLevel | 'ALL')}
+                     className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                   >
+                     <option value="ALL">All Levels</option>
+                     <option value="CRITICAL">Critical</option>
+                     <option value="HIGH">High</option>
+                     <option value="MEDIUM">Medium</option>
+                     <option value="LOW">Low</option>
+                     <option value="NORMAL">Normal</option>
+                   </select>
+                 </div>
+
+                 {/* Confidence Filter */}
+                 <div className="flex items-center gap-2">
+                   <span className="text-xs text-slate-500">Confidence:</span>
+                   <select
+                     value={confidenceFilter}
+                     onChange={(e) => setConfidenceFilter(e.target.value as ConfidenceLevel | 'ALL')}
+                     className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                   >
+                     <option value="ALL">All Levels</option>
+                     <option value="HIGH">High</option>
+                     <option value="MEDIUM">Medium</option>
+                     <option value="LOW">Low</option>
+                   </select>
+                 </div>
+
+                 {/* Clear Filters */}
+                 {hasActiveFilters && (
+                   <button
+                     onClick={clearFilters}
+                     className="text-xs text-red-400 hover:text-red-300 ml-auto"
+                   >
+                     Clear All
+                   </button>
+                 )}
+               </div>
+             )}
            </div>
            
-           <div className="flex-1 overflow-y-auto pr-2">
-             {patients.length === 0 ? (
+           {/* Patient List */}
+           <div className="flex-1 overflow-y-auto pr-2" style={{ maxHeight: 'calc(100vh - 480px)' }}>
+             {paginatedPatients.length === 0 ? (
                <div className="text-slate-500 text-center py-8">
-                 No patients currently being monitored.
-                 <br />
-                 <span className="text-sm">Start the consumer to see real-time data.</span>
+                 {hasActiveFilters ? (
+                   <>
+                     No patients match your filters.
+                     <br />
+                     <button onClick={clearFilters} className="text-blue-400 hover:text-blue-300 text-sm mt-2">
+                       Clear filters
+                     </button>
+                   </>
+                 ) : (
+                   <>
+                     No patients currently being monitored.
+                     <br />
+                     <span className="text-sm">Start the consumer to see real-time data.</span>
+                   </>
+                 )}
                </div>
              ) : (
-               patients.map(patient => (
+               paginatedPatients.map(patient => (
                  <PatientCard 
                    key={patient.stay_id} 
                    patient={patient} 
@@ -233,10 +397,67 @@ const App: React.FC = () => {
                ))
              )}
            </div>
+
+           {/* Pagination */}
+           {totalPages > 1 && (
+             <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-800">
+               <div className="text-sm text-slate-500">
+                 Page {currentPage} of {totalPages}
+               </div>
+               <div className="flex items-center gap-2">
+                 <button
+                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                   disabled={currentPage === 1}
+                   className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                 >
+                   <ChevronLeft size={16} />
+                   Prev
+                 </button>
+                 
+                 {/* Page Numbers */}
+                 <div className="flex gap-1">
+                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                     let pageNum: number;
+                     if (totalPages <= 5) {
+                       pageNum = i + 1;
+                     } else if (currentPage <= 3) {
+                       pageNum = i + 1;
+                     } else if (currentPage >= totalPages - 2) {
+                       pageNum = totalPages - 4 + i;
+                     } else {
+                       pageNum = currentPage - 2 + i;
+                     }
+                     return (
+                       <button
+                         key={pageNum}
+                         onClick={() => setCurrentPage(pageNum)}
+                         className={`w-8 h-8 rounded-lg text-sm ${
+                           currentPage === pageNum
+                             ? 'bg-blue-600 text-white'
+                             : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                         }`}
+                       >
+                         {pageNum}
+                       </button>
+                     );
+                   })}
+                 </div>
+
+                 <button
+                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                   disabled={currentPage === totalPages}
+                   className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                 >
+                   Next
+                   <ChevronRight size={16} />
+                 </button>
+               </div>
+             </div>
+           )}
         </div>
 
         {/* Right Col: Charts & Alerts */}
-        <div className="col-span-12 lg:col-span-5 flex flex-col h-full gap-6">
+        <div className="col-span-12 lg:col-span-5 flex flex-col gap-6">
           
           {/* Risk Distribution - Compact Height */}
           <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 shrink-0">
@@ -245,7 +466,7 @@ const App: React.FC = () => {
           </div>
 
           {/* Alert Feed - Takes remaining space */}
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0" style={{ maxHeight: 'calc(100vh - 480px)' }}>
             <AlertFeed 
               alerts={alerts} 
               onAcknowledge={handleAcknowledgeAlert} 
