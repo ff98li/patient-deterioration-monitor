@@ -66,7 +66,8 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
                 {patient.risk_level} RISK
               </span>
             </h2>
-            <p className="text-slate-400 text-sm mt-1">Admitted for Sepsis Monitoring • ICU Bed 4</p>
+            {/* <p className="text-slate-400 text-sm mt-1">Admitted for Sepsis Monitoring • ICU Bed 4</p> */}
+            <p className="text-slate-400 text-sm mt-1">MIMIC-IV Dataset • Subject #{patient.subject_id}</p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
             <X size={24} />
