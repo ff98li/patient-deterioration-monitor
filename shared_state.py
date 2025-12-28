@@ -84,7 +84,16 @@ def update_patient(stay_id: int, data: Dict[str, Any]) -> None:
                 'spo2': data.get('vitals', {}).get('spo2') or existing.get('vitals', {}).get('spo2', 0),
                 'systolic_bp': data.get('vitals', {}).get('systolic_bp') or existing.get('vitals', {}).get('systolic_bp', 0),
                 'diastolic_bp': data.get('vitals', {}).get('diastolic_bp') or existing.get('vitals', {}).get('diastolic_bp', 0),
-                'temperature_c': data.get('vitals', {}).get('temperature_c') or existing.get('vitals', {}).get('temperature_c', 0),
+                # 'temperature_c': data.get('vitals', {}).get('temperature_c') or existing.get('vitals', {}).get('temperature_c', 0),
+                # 1. Use temperature_c if available
+                # 2. Convert temperature_f to Celsius if only F is available
+                # 3. Fall back to existing value
+                'temperature_c': (
+                    data.get('vitals', {}).get('temperature_c') or
+                    (((data.get('vitals', {}).get('temperature_f') or 0) - 32) * 5/9 
+                     if data.get('vitals', {}).get('temperature_f') else None) or
+                    existing.get('vitals', {}).get('temperature_c', 0)
+                ),
             },
             
             # Labs (may come from separate update) - preserve existing
