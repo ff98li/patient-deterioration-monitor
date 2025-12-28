@@ -31,3 +31,6 @@ data/*.csv
 
 # Backup files
 *.backup
+
+# local data not needed, using BigQuery
+data/
