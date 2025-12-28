@@ -90,7 +90,7 @@ def update_patient(stay_id: int, data: Dict[str, Any]) -> None:
                 # 3. Fall back to existing value
                 'temperature_c': (
                     data.get('vitals', {}).get('temperature_c') or
-                    (((data.get('vitals', {}).get('temperature_f') or 0) - 32) * 5/9 
+                    (round(((data.get('vitals', {}).get('temperature_f') or 0) - 32) * 5/9, 1)
                      if data.get('vitals', {}).get('temperature_f') else None) or
                     existing.get('vitals', {}).get('temperature_c', 0)
                 ),
