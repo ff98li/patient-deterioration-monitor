@@ -18,7 +18,7 @@ export interface Vitals {
   spo2: number;
   systolic_bp: number;
   diastolic_bp: number;
-  temperature_f: number;
+  temperature_c: number;
 }
 
 export interface Labs {

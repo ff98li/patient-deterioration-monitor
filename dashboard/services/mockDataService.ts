@@ -34,7 +34,7 @@ export const generateMockData = (): { patients: Patient[], stats: DashboardStats
       spo2: isCritical ? randomInt(85, 92) : randomInt(95, 100),
       systolic_bp: isCritical ? randomInt(80, 100) : randomInt(110, 130),
       diastolic_bp: isCritical ? randomInt(40, 60) : randomInt(70, 85),
-      temperature_f: isCritical ? randomFloat(101.5, 104) : randomFloat(97.5, 99.5),
+      temperature_c: isCritical ? randomFloat(38.6, 40.0) : randomFloat(36.4, 37.5),
     };
 
     // Generate Labs

@@ -76,7 +76,7 @@ export const PatientCard: React.FC<PatientCardProps> = ({ patient, onClick }) =>
           <VitalItem label="RR" value={patient.vitals.respiratory_rate} unit="/min" icon={VITAL_ICONS.rr} risk={patient.vitals.respiratory_rate > 20} />
           <VitalItem label="SpO2" value={patient.vitals.spo2} unit="%" icon={VITAL_ICONS.spo2} risk={patient.vitals.spo2 < 92} />
           <VitalItem label="BP" value={`${patient.vitals.systolic_bp}/${patient.vitals.diastolic_bp}`} unit="mmHg" icon={VITAL_ICONS.bp} risk={patient.vitals.systolic_bp < 90} />
-          <VitalItem label="Temp" value={patient.vitals.temperature_f} unit="°F" icon={VITAL_ICONS.temp} risk={patient.vitals.temperature_f > 100.4} />
+          <VitalItem label="Temp" value={patient.vitals.temperature_c} unit="°C" icon={VITAL_ICONS.temp} risk={patient.vitals.temperature_c >= 38.5} />
         </div>
 
         {/* Labs Row */}

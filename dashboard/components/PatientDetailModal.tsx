@@ -88,7 +88,7 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
                     <VitalBox label="Resp. Rate" value={patient.vitals.respiratory_rate} unit="/min" />
                     <VitalBox label="SpO2" value={patient.vitals.spo2} unit="%" />
                     <VitalBox label="BP" value={`${patient.vitals.systolic_bp}/${patient.vitals.diastolic_bp}`} unit="mmHg" />
-                    <VitalBox label="Temp" value={patient.vitals.temperature_f} unit="°F" />
+                    <VitalBox label="Temp" value={patient.vitals.temperature_c} unit="°C" />
                 </div>
                </div>
 

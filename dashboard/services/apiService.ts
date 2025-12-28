@@ -96,7 +96,7 @@ const transformPatient = (backendPatient: any): Patient => {
       spo2: backendPatient.vitals?.spo2 || 0,
       systolic_bp: backendPatient.vitals?.systolic_bp || 0,
       diastolic_bp: backendPatient.vitals?.diastolic_bp || 0,
-      temperature_f: backendPatient.vitals?.temperature_f || 0,
+      temperature_c: backendPatient.vitals?.temperature_c || 0,
     },
     
     labs: {
