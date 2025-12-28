@@ -77,7 +77,7 @@ def update_patient(stay_id: int, data: Dict[str, Any]) -> None:
             'risk_level': data.get('risk_level', existing.get('risk_level', 'NORMAL')),
             'last_updated': datetime.now(UTC).isoformat(),
             
-            # Vitals - using temperature_c (Celsius)
+            # Vitals
             'vitals': {
                 'heart_rate': data.get('vitals', {}).get('heart_rate') or existing.get('vitals', {}).get('heart_rate', 0),
                 'respiratory_rate': data.get('vitals', {}).get('respiratory_rate') or existing.get('vitals', {}).get('respiratory_rate', 0),

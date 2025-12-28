@@ -8,7 +8,7 @@ This demonstrates Confluent Kafka's multi-stream processing capability.
 """
 
 import json
-from datetime import datetime, UTC, timedelta
+from datetime import datetime, UTC
 from collections import defaultdict
 from confluent_kafka import Consumer, KafkaError
 from typing import Dict, List, Optional
@@ -38,41 +38,6 @@ pending_alerts = defaultdict(lambda: {
     'last_mews': 0,
     'confirmed': False
 })
-
-# ============================================================
-# AI THROTTLING - Reduce Vertex AI API costs
-# ============================================================
-_ai_call_timestamps: Dict[int, datetime] = {}  # stay_id -> last AI call time
-AI_COOLDOWN_SECONDS = 300  # 5 minutes between AI calls per patient
-
-def should_call_ai(stay_id: int) -> bool:
-    """
-    Rate limit AI calls per patient to reduce API costs.
-    Returns True if enough time has passed since last AI call for this patient.
-    """
-    now = datetime.now(UTC)
-    last_call = _ai_call_timestamps.get(stay_id)
-    
-    if last_call is None:
-        _ai_call_timestamps[stay_id] = now
-        return True
-    
-    time_since_last = (now - last_call).total_seconds()
-    if time_since_last >= AI_COOLDOWN_SECONDS:
-        _ai_call_timestamps[stay_id] = now
-        return True
-    
-    return False
-
-def get_ai_cooldown_remaining(stay_id: int) -> int:
-    """Get seconds remaining until AI can be called again for this patient."""
-    last_call = _ai_call_timestamps.get(stay_id)
-    if last_call is None:
-        return 0
-    elapsed = (datetime.now(UTC) - last_call).total_seconds()
-    remaining = AI_COOLDOWN_SECONDS - elapsed
-    return max(0, int(remaining))
-# ============================================================
 
 # Configuration
 ALERT_CONFIRMATION_COUNT = 2
@@ -459,41 +424,34 @@ def display_alert_with_labs(alert: dict, vitals: dict, mews_result: dict,
     
     print("!" * 70)
     
-    # Get AI interpretation with labs context - WITH THROTTLING
-    stay_id = alert['stay_id']
+    # Get AI interpretation with labs context
     if alert['severity'] in ['HIGH', 'CRITICAL']:
-        if should_call_ai(stay_id):
-            print(f"  🤖 Calling AI for patient {stay_id}...")
-            ai_result = get_ai_interpretation_with_labs(
-                vitals,
-                mews_result,
-                labs=combined.get('labs'),
-                labs_age_minutes=combined.get('labs_age_minutes'),
-                sepsis_check=combined.get('sepsis_check'),
-                project_id=config.GCP_PROJECT_ID,
-                region=config.GCP_REGION
-            )
-            
-            confidence = ai_result.get('confidence', 'UNKNOWN')
-            confidence_emoji = {'HIGH': '🟢', 'MEDIUM': '🟡', 'LOW': '🔴', 'UNKNOWN': '⚪'}.get(confidence, '⚪')
-            
-            print(f"\n  🤖 AI Assessment (Confidence: {confidence_emoji} {confidence}):")
-            print(f"     {ai_result.get('interpretation', 'No interpretation available')}")
-            
-            shared_state.update_patient_ai(alert['stay_id'], ai_result)
+        ai_result = get_ai_interpretation_with_labs(
+            vitals,
+            mews_result,
+            labs=combined.get('labs'),
+            labs_age_minutes=combined.get('labs_age_minutes'),
+            sepsis_check=combined.get('sepsis_check'),
+            project_id=config.GCP_PROJECT_ID,
+            region=config.GCP_REGION
+        )
+        
+        confidence = ai_result.get('confidence', 'UNKNOWN')
+        confidence_emoji = {'HIGH': '🟢', 'MEDIUM': '🟡', 'LOW': '🔴', 'UNKNOWN': '⚪'}.get(confidence, '⚪')
+        
+        print(f"\n  🤖 AI Assessment (Confidence: {confidence_emoji} {confidence}):")
+        print(f"     {ai_result.get('interpretation', 'No interpretation available')}")
+        
+        shared_state.update_patient_ai(alert['stay_id'], ai_result)
 
-            if ai_result.get('priority_concerns'):
-                print(f"     📋 Concerns: {', '.join(ai_result['priority_concerns'][:3])}")
-            
-            if ai_result.get('recommended_actions'):
-                print(f"     💊 Actions: {', '.join(ai_result['recommended_actions'][:2])}")
-            
-            if confidence in ['LOW', 'MEDIUM']:
-                print(f"     ⚠️  {ai_result.get('confidence_reasoning', '')}")
-        else:
-            cooldown = get_ai_cooldown_remaining(stay_id)
-            print(f"\n  ⏳ AI throttled for patient {stay_id} (cooldown: {cooldown}s remaining)")
-            print(f"     Using previous assessment. Next AI call in {cooldown}s.")
+        if ai_result.get('priority_concerns'):
+            print(f"     📋 Concerns: {', '.join(ai_result['priority_concerns'][:3])}")
+        
+        if ai_result.get('recommended_actions'):
+            print(f"     💊 Actions: {', '.join(ai_result['recommended_actions'][:2])}")
+        
+        if confidence in ['LOW', 'MEDIUM']:
+            print(f"     ⚠️  {ai_result.get('confidence_reasoning', '')}")
     
     print()
 
@@ -505,13 +463,11 @@ def consume_multistream(consumer: Consumer):
     print(f"\n👂 Listening for data on topics: {VITALS_TOPIC}, {LABS_TOPIC}")
     print(f"   Alert threshold: {config.ALERT_THRESHOLD}")
     print(f"   Lab staleness threshold: {LAB_STALENESS_MINUTES} minutes")
-    print(f"   AI cooldown per patient: {AI_COOLDOWN_SECONDS} seconds")
     print("-" * 70)
     
     vitals_count = 0
     labs_count = 0
     alert_count = 0
-    ai_calls_saved = 0
     
     try:
         while True:
