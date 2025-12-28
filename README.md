@@ -1,8 +1,7 @@
-The Silent Alarm: Real-Time Predictive Intelligence for Critical Care
 # Real-Time Patient Deterioration Prediction System
-**Confluent x GCP Healthcare AI Hackathon**
+**AI Partner Catalyst: Confluent Challenge**
 
-*A real-time clinical decision support system that predicts patient deterioration using streaming vital signs and laboratory data, powered by Confluent Kafka and Google Cloud Vertex AI.*
+*A real-time clinical decision support system for critical care that predicts patient deterioration using real-time streaming vital signs and laboratory data, powered by Confluent Cloud, Apache Kafka and Google Cloud Vertex AI.*
 
 ## Project Overview
 This project addresses the critical "failure to rescue" gap in modern inpatient care. Despite the abundance of physiological data in hospitals, In-Hospital Cardiac Arrest (IHCA) remains a leading cause of preventable mortality. This system transitions monitoring from reactive, batch-based analysis to a Real-Time, Multimodal Streaming Intelligence platform capable of detecting patient deterioration hours before a critical event.
@@ -216,10 +215,10 @@ AI Assessment (Confidence: 🟡 MEDIUM):
 ## Installation & Setup
 
 ### Prerequisites
-- Python 3.9+
+- Python 3.11+
 - Confluent Cloud account
 - Google Cloud account with Vertex AI enabled
-- MIMIC-IV BigQuery access
+- MIMIC-IV BigQuery access (PhysioNet credentialing)
 
 ### Environment Setup
 
@@ -337,6 +336,8 @@ Cross-correlates vitals and labs for sepsis indicators:
 Hamilton, S., et al. (1995). ICU and non-ICU cost per day. Canadian Journal of Anaesthesia, 42(3), 192–196.
 
 Hillman, K., et al. (2001). Redefining in-hospital resuscitation: the concept of the medical emergency team. Resuscitation, 48(2), 105–110.
+
+Johnson, A.E.W., et al. (2023). MIMIC-IV, a freely accessible electronic health record dataset. Sci Data 10, 1.
 
 Kwon, J. M., et al. (2018). An Algorithm Based on Deep Learning for Predicting In-Hospital Cardiac Arrest. Journal of the American Heart Association, 7(13), e008678.
 

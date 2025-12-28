@@ -6,12 +6,23 @@ enhanced with Vertex AI for natural language interpretation.
 
 MEWS is a simple scoring system used in hospitals to identify patients
 at risk of deterioration. Higher scores indicate higher risk.
+
+References:
+- Original MEWS: Subbe CP, Kruger M, Rutherford P, Gemmel L. Validation of a 
+  modified Early Warning Score in medical admissions. QJM. 2001;94(10):521-526.
+  doi:10.1093/qjmed/94.10.521
+
+- SpO2 addition (ViEWS): Prytherch DR, Smith GB, Schmidt PE, Featherstone PI. 
+  ViEWS--Towards a national early warning score for detecting adult inpatient 
+  deterioration. Resuscitation. 2010;81(8):932-937.
+  doi:10.1016/j.resuscitation.2010.04.014
+
+- NEWS2 (current UK standard): Royal College of Physicians. National Early 
+  Warning Score (NEWS) 2. 2017.
 """
 
 import time
 from typing import Dict
-#import vertexai
-#from vertexai.generative_models import GenerativeModel
 from google import genai
 from google.genai import types, Client
 
@@ -22,6 +33,7 @@ _last_ai_call = 0
 _max_retries = 3
 
 # MEWS Scoring Tables (clinically validated thresholds)
+# Based on Subbe et al. 2001, with SpO2 from Prytherch et al. 2010 (ViEWS)
 MEWS_CRITERIA = {
     'systolic_bp': [
         (0, 70, 3),      # <= 70: score 3
@@ -45,12 +57,15 @@ MEWS_CRITERIA = {
         (21, 29, 2),     # 21-29: score 2
         (30, 999, 3),    # >= 30: score 3
     ],
-    'temperature_f': [
-        (0, 95, 2),      # <= 95°F (35°C): score 2
-        (95.1, 101.1, 0),  # Normal range: score 0
-        (101.2, 102.2, 1), # Low fever: score 1
-        (102.3, 999, 2),   # High fever: score 2
+    # Temperature in Celsius (Subbe et al. 2001)
+    # Note: Original MEWS only has scores 0 and 2 for temperature
+    'temperature_c': [
+        (0, 34.9, 2),      # < 35°C: score 2 (hypothermia)
+        (35.0, 38.4, 0),   # 35.0-38.4°C: score 0 (normal)
+        (38.5, 999, 2),    # >= 38.5°C: score 2 (fever)
     ],
+    # SpO2 scoring based on ViEWS (Prytherch et al. 2010)
+    # Added to enhance MEWS for ICU monitoring
     'spo2': [
         (0, 91, 3),      # <= 91%: score 3 (critical)
         (92, 93, 2),     # 92-93%: score 2
@@ -76,13 +91,25 @@ def calculate_mews_score(vitals: Dict[str, float]) -> Dict:
     """
     Calculate total MEWS score from vital signs.
     
+    Handles both temperature_c and temperature_f (converts F to C).
+    
     Returns:
         Dict with total score, component breakdown, and risk level
     """
     components = {}
     total_score = 0
     
-    for vital_type, value in vitals.items():
+    # Create a working copy to handle temperature conversion
+    vitals_processed = vitals.copy()
+    
+    # Handle temperature: prefer Celsius, convert Fahrenheit if needed
+    if 'temperature_f' in vitals_processed and 'temperature_c' not in vitals_processed:
+        # Convert Fahrenheit to Celsius
+        temp_f = vitals_processed.get('temperature_f')
+        if temp_f is not None:
+            vitals_processed['temperature_c'] = (temp_f - 32) * 5 / 9
+    
+    for vital_type, value in vitals_processed.items():
         if value is not None and vital_type in MEWS_CRITERIA:
             score = calculate_mews_component(vital_type, value)
             components[vital_type] = {
@@ -137,7 +164,7 @@ def get_ai_interpretation(
     
     # Count available vitals for confidence assessment
     available_vitals = [k for k, v in vitals.items() if v is not None]
-    missing_vitals = [k for k in ['heart_rate', 'systolic_bp', 'respiratory_rate', 'spo2', 'temperature_f'] 
+    missing_vitals = [k for k in ['heart_rate', 'systolic_bp', 'respiratory_rate', 'spo2', 'temperature_c'] 
                      if k not in available_vitals]
     
     prompt = f"""You are a clinical decision support assistant analyzing patient vital signs.
@@ -217,87 +244,6 @@ Confidence guidelines:
     }
 
 
-##def get_ai_interpretation(
-##    vitals: Dict[str, float],
-##    mews_result: Dict,
-##    project_id: str,
-##    region: str = "asia-southeast1"
-##) -> str:
-##    """
-##    Use Vertex AI Gemini to generate a clinical interpretation.
-##    
-##    This adds value beyond the simple score by providing context
-##    and suggested actions.
-##    """
-##
-##    global _last_ai_call
-##    global _max_retries
-##    elapsed = time.time() - _last_ai_call
-##    if elapsed < MIN_AI_INTERVAL:
-##        time.sleep(MIN_AI_INTERVAL - elapsed)
-##
-##    prompt = f"""You are a clinical decision support assistant. 
-##            Based on the following patient vital signs and MEWS score, provide a brief 
-##            (2-3 sentence) clinical interpretation and any immediate concerns.
-##
-##            Vital Signs:
-##            {format_vitals_for_prompt(vitals)}
-##            
-##            MEWS Score: {mews_result['mews_total']} ({mews_result['risk_level']} risk)
-##            
-##            Component Scores:
-##            {format_components_for_prompt(mews_result['components'])}
-##            
-##            Provide a concise clinical interpretation:"""
-##
-##    #try:
-##    #    ## [DEPRECATED]: Using Google GenAI client instead of Vertex AI directly
-##    #    ## Initialize Vertex AI and the Gemini model
-##    #    #vertexai.init(project=project_id, location=region)
-##    #    #model = GenerativeModel("gemini-2.5-flash")
-##    #    
-##    #    #response = model.generate_content(prompt)
-##    #    #return response.text
-##
-##    #    ## Migrate to Google GenAI client from Vertex AI
-##    #    client = Client(
-##    #        vertexai=True,
-##    #        project=project_id,
-##    #        location=region
-##    #    )
-##    #    response = client.models.generate_content(
-##    #        model=MODEL_ID,
-##    #        contents=prompt,
-##    #    )
-##    #    return response.text
-##    
-##    #except Exception as e:
-##    #    return f"AI interpretation unavailable: {str(e)}"
-##
-##    for attempt in range(_max_retries):
-##        try:
-##            client = Client(
-##                vertexai=True,
-##                project=project_id,
-##                location=region
-##            )
-##            response = client.models.generate_content(
-##                model=MODEL_ID,
-##                contents=prompt,
-##            )
-##            _last_ai_call = time.time()
-##            return response.text
-##        
-##        except Exception as e:
-##            if "429" in str(e) and attempt < _max_retries - 1:
-##                wait_time = (attempt + 1) * 3  # 3s, 6s, 9s
-##                time.sleep(wait_time)
-##                continue
-##            return f"AI interpretation unavailable: {str(e)}"
-##    
-##    return "AI interpretation unavailable: max retries exceeded"
-
-
 def format_vitals_for_prompt(vitals: Dict[str, float]) -> str:
     """Format vitals dictionary for the AI prompt."""
     lines = []
@@ -307,13 +253,15 @@ def format_vitals_for_prompt(vitals: Dict[str, float]) -> str:
         'diastolic_bp': 'Diastolic BP',
         'respiratory_rate': 'Respiratory Rate',
         'spo2': 'SpO2',
+        'temperature_c': 'Temperature',
         'temperature_f': 'Temperature',
         'mean_arterial_pressure': 'MAP'
     }
     for key, value in vitals.items():
-        label = vital_labels.get(key, key)
-        unit = get_unit(key)
-        lines.append(f"- {label}: {value}{unit}")
+        if value is not None:
+            label = vital_labels.get(key, key)
+            unit = get_unit(key)
+            lines.append(f"- {label}: {value}{unit}")
     return '\n'.join(lines)
 
 
@@ -334,6 +282,7 @@ def get_unit(vital_type: str) -> str:
         'mean_arterial_pressure': ' mmHg',
         'respiratory_rate': ' /min',
         'spo2': '%',
+        'temperature_c': '°C',
         'temperature_f': '°F'
     }
     return units.get(vital_type, '')
@@ -341,13 +290,13 @@ def get_unit(vital_type: str) -> str:
 
 # Example usage
 if __name__ == "__main__":
-    # Test with sample vitals
+    # Test with sample vitals (now using Celsius)
     sample_vitals = {
         'heart_rate': 125,
         'systolic_bp': 85,
         'respiratory_rate': 24,
         'spo2': 93,
-        'temperature_f': 101.5
+        'temperature_c': 38.6  # Celsius
     }
     
     result = calculate_mews_score(sample_vitals)
