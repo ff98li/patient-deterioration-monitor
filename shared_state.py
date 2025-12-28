@@ -84,7 +84,7 @@ def update_patient(stay_id: int, data: Dict[str, Any]) -> None:
                 'spo2': data.get('vitals', {}).get('spo2') or existing.get('vitals', {}).get('spo2', 0),
                 'systolic_bp': data.get('vitals', {}).get('systolic_bp') or existing.get('vitals', {}).get('systolic_bp', 0),
                 'diastolic_bp': data.get('vitals', {}).get('diastolic_bp') or existing.get('vitals', {}).get('diastolic_bp', 0),
-                'temperature_f': data.get('vitals', {}).get('temperature_f') or existing.get('vitals', {}).get('temperature_f', 0),
+                'temperature_c': data.get('vitals', {}).get('temperature_c') or existing.get('vitals', {}).get('temperature_c', 0),
             },
             
             # Labs (may come from separate update) - preserve existing
@@ -141,7 +141,7 @@ def update_patient_labs(stay_id: int, labs_data: Dict[str, Any]) -> None:
                 'mews_score': 0,
                 'risk_level': 'NORMAL',
                 'last_updated': datetime.now(UTC).isoformat(),
-                'vitals': {'heart_rate': 0, 'respiratory_rate': 0, 'spo2': 0, 'systolic_bp': 0, 'diastolic_bp': 0, 'temperature_f': 0},
+                'vitals': {'heart_rate': 0, 'respiratory_rate': 0, 'spo2': 0, 'systolic_bp': 0, 'diastolic_bp': 0, 'temperature_c': 0},
                 'labs': {'lactate': 0, 'creatinine': 0, 'wbc': 0, 'potassium': 0},
                 'labs_received_at': None,
                 'sepsis_risk': 'LOW',
