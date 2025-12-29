@@ -47,10 +47,18 @@
 | **API** | [https://patient-deterioration-monitor.ffli.dev](https://patient-deterioration-monitor.ffli.dev) |
 
 ## Project Overview
-This project addresses the critical "failure to rescue" gap in modern inpatient care. Despite the abundance of physiological data in hospitals, In-Hospital Cardiac Arrest (IHCA) remains a leading cause of preventable mortality. This system transitions monitoring from reactive, batch-based analysis to a Real-Time, Multimodal Streaming Intelligence platform capable of detecting patient deterioration hours before a critical event.
+
+This project addresses the critical "failure to rescue" gap in modern inpatient care. 
+In-Hospital Cardiac Arrest (IHCA) affects over 290,000 adults annually in the United States, 
+with mortality rates exceeding 70% (Andersen et al., 2019). Despite the abundance of 
+physiological data in hospitals, traditional monitoring relies on intermittent checks that 
+often miss early warning signs. This system transitions monitoring from reactive observation 
+to a real-time, multimodal streaming intelligence platform capable of detecting patient 
+deterioration hours before a critical event.
 
 ### The Challenge: Preventable In-Hospital Deterioration
 
+- **290,000 in-hospital cardiac arrests** occur annually in the United States alone (Andersen et al., 2019)
 - **80% of cardiac arrests** show warning signs 6-8 hours before the event (Schein et al., 1990)
 - **Alert fatigue** plagues existing systems — positive predictive value (PPV) as low as 6% in some early warning systems (Hillman et al., 2001)
 - **ICU costs significantly more** than ward care, with direct costs 6-7 times higher for ICU survivors (Hamilton et al., 1995)
@@ -290,15 +298,28 @@ patient-deterioration-monitor/
 ```
 
 ## Background & Clinical Rationale
-### The "80%" Reality
-Current clinical literature establishes that cardiac arrest is rarely a sudden, unpredictable event. Research consistently demonstrates that 80% of in-hospital cardiac arrests are preceded by identifiable physiological warning signs, known as clinical antecedents (Schein et al., 1990). These signs typically manifest as progressive instability in respiratory rate, heart rate, or blood pressure, often occurring alongside subtle changes in mental status (Hillman et al., 2001).
 
-### The 6-8 Hour Window
-Crucially, these warning signs are detectable for an average of 6 to 8 hours prior to the terminal event (Schein et al., 1990; Hillman et al., 2001). This creates a significant "window of opportunity" for early intervention. However, traditional intermittent nursing checks (typically every 4-8 hours) frequently miss this window, leading to reactive "Code Blue" responses rather than proactive care (Kwon et al., 2018).
+### The "84%" Reality
+Current clinical literature establishes that cardiac arrest is rarely a sudden, 
+unpredictable event. Research demonstrates that 84% of in-hospital cardiac arrests 
+are preceded by documented clinical deterioration within eight hours of the event 
+(Schein et al., 1990). These signs typically manifest as progressive instability 
+in respiratory rate, heart rate, or blood pressure—70% of patients showed 
+deterioration in respiratory or mental function prior to arrest (Schein et al., 1990).
+
+### The 8-Hour Window
+Crucially, these warning signs are detectable within 8 hours prior to arrest 
+(Schein et al., 1990). This creates a significant "window of opportunity" for 
+early intervention. However, traditional intermittent nursing checks may miss 
+this window, leading to reactive "Code Blue" responses rather than proactive care.
 
 ### Economic Impact
-The cost of missing this window is severe. Intensive Care Unit (ICU) transfers triggered by late-stage deterioration are significantly more expensive than early interventions delivered on the ward. Studies indicate that the direct costs per day for ICU survivors can be 6 to 7 times higher than for non-ICU care (Hamilton et al., 1995). Furthermore, complications arising from delayed detection, such as Acute Kidney Injury (AKI) or hospital-acquired infections, can increase mortality risk by 3-5 times and add substantially to the cost per episode (Observe Medical, 2021). By preventing unplanned ICU admissions, this system aims to reduce length of stay and alleviate capacity constraints ("bed blocking").
-
+The cost of missing this window is severe. Intensive Care Unit (ICU) transfers 
+triggered by late-stage deterioration are significantly more expensive than early 
+interventions delivered on the ward. Studies indicate that ICU direct costs per day 
+for survivors are six to seven times higher than for non-ICU care (Norris et al., 1995). 
+By preventing unplanned ICU admissions, this system aims to reduce length of stay 
+and alleviate capacity constraints.
 
 ## Future Enhancements
 
@@ -320,15 +341,13 @@ MIT License. See [LICENSE](LICENSE) file for details.
 
 ## References
 
-Hamilton, S., Mion, L. C., & DePew, D. D. (1995). ICU and non-ICU cost per day. *Canadian Journal of Anaesthesia, 42*(3), 192–196. https://doi.org/10.1007/BF03010674
+Andersen, L. W., Holmberg, M. J., Berg, K. M., Donnino, M. W., & Granfeldt, A. (2019). In-hospital cardiac arrest: A review. *JAMA, 321*(12), 1200–1210. https://doi.org/10.1001/jama.2019.1696
 
-Hillman, K., Bristow, P., Chey, T., Daffurn, K., Jacques, T., Norman, S., Bishop, G., & Simmons, G. (2001). Antecedents to hospital deaths. *Internal Medicine Journal, 31*(6), 343–348. https://doi.org/10.1046/j.1445-5994.2001.00077.x
+Hamilton, S., Mion, L. C., & DePew, D. D. (1995). ICU and non-ICU cost per day. *Canadian Journal of Anaesthesia, 42*(3), 192–196. https://doi.org/10.1007/BF03010674
 
 Johnson, A. E. W., Bulgarelli, L., Shen, L., Gayles, A., Shammber, A., Horng, S., Pollard, T. J., Hao, S., Moody, B., Gow, B., Lehman, L.-W. H., Celi, L. A., & Mark, R. G. (2023). MIMIC-IV, a freely accessible electronic health record dataset. *Scientific Data, 10*, Article 1. https://doi.org/10.1038/s41597-022-01899-x
 
-Kwon, J. M., Lee, Y., Lee, Y., Lee, S., & Park, J. (2018). An algorithm based on deep learning for predicting in-hospital cardiac arrest. *Journal of the American Heart Association, 7*(13), Article e008678. https://doi.org/10.1161/JAHA.118.008678
-
-Observe Medical ASA. (2021). *Third quarter 2021 presentation*. Observe Medical Investor Relations.
+Norris, C., Jacobs, P., Rapoport, J., & Noseworthy, T. W. (1995). ICU and non-ICU cost per day. *Canadian Journal of Anaesthesia, 42*(3), 192–196. https://doi.org/10.1007/BF03010674
 
 Prytherch, D. R., Smith, G. B., Schmidt, P. E., & Featherstone, P. I. (2010). ViEWS—Towards a national early warning score for detecting adult inpatient deterioration. *Resuscitation, 81*(8), 932–937. https://doi.org/10.1016/j.resuscitation.2010.04.014
 
