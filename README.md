@@ -7,18 +7,9 @@
 
 ## Table of Contents
 - [Project Overview](#project-overview)
-  - [The Challenge: Preventable In-Hospital Deterioration](#the-challenge-preventable-in-hospital-deterioration)
-  - [Our Solution](#our-solution)
 - [Architecture](#architecture)
 - [Key Features](#key-features)
-  - [1. Multi-Stream Processing with Confluent Kafka](#1-multi-stream-processing-with-confluent-kafka)
-  - [2. Clinical Scoring (MEWS)](#2-clinical-scoring-mews)
-  - [3. Zero-Shot LLM Advantage](#3-zero-shot-llm-advantage)
-  - [4. Confidence-Aware AI Assessment](#4-confidence-aware-ai-assessment)
-  - [5. Alert Fatigue Mitigation](#5-alert-fatigue-mitigation)
-  - [6. Real-Time Dashboard](#6-real-time-dashboard)
 - [Clinical Scoring Methodology](#clinical-scoring-methodology)
-  - [MEWS Scoring Thresholds](#mews-scoring-thresholds)
 - [Technology Stack](#technology-stack)
 - [Dataset](#dataset)
   - [MIMIC-IV (PhysioNet)](#mimic-iv-physionet)
@@ -30,9 +21,6 @@
   - [Running Locally](#running-locally)
 - [Project Structure](#project-structure)
 - [Background \& Clinical Rationale](#background--clinical-rationale)
-  - [The "80%" Reality](#the-80-reality)
-  - [The 6-8 Hour Window](#the-6-8-hour-window)
-  - [Economic Impact](#economic-impact)
 - [Future Enhancements](#future-enhancements)
 - [Acknowledgments](#acknowledgments)
 - [License](#license)
@@ -59,10 +47,10 @@ deterioration hours before a critical event.
 ### The Challenge: Preventable In-Hospital Deterioration
 
 - **290,000 in-hospital cardiac arrests** occur annually in the United States alone (Andersen et al., 2019)
-- **80% of cardiac arrests** show warning signs 6-8 hours before the event (Schein et al., 1990)
-- **Alert fatigue** plagues existing systems — positive predictive value (PPV) as low as 6% in some early warning systems (Hillman et al., 2001)
-- **ICU costs significantly more** than ward care, with direct costs 6-7 times higher for ICU survivors (Hamilton et al., 1995)
-
+- **84% of cardiac arrests** show warning signs within 8 hours of the event (Schein et al., 1990)
+- **ICU costs significantly more** than ward care, with direct costs 6-7 times higher for ICU survivors (Norris et al., 1995)
+- **Alert fatigue** plagues existing systems — positive predictive value (PPV) as low as 4-7% for MEWS and NEWS at clinically useful sensitivity thresholds (Churpek et al., 2018)
+ 
 ### Our Solution
 
 A streaming analytics platform that:
@@ -149,7 +137,7 @@ This system implements a **Modified MEWS with SpO2**, combining:
 
 1. **Core MEWS parameters** (Subbe et al., 2001): Heart rate, respiratory rate, 
    systolic blood pressure, and temperature thresholds
-   - Original 5-parameter score: HR, RR, SBP, Temperature, AVPU
+   - Original 5-parameter score: HR, RR, SBP, Temperature, and level of consciousness (AVPU scale)
    - MEWS ≥5 associated with increased mortality (OR 5.4) and ICU admission (OR 10.9)
 
 2. **SpO2 scoring** (Prytherch et al., 2010 — ViEWS): Oxygen saturation thresholds 
@@ -169,7 +157,8 @@ This hybrid approach is appropriate for ICU monitoring where continuous SpO2 dat
 | **Temp** (°C) | — | <35 | — | 35–38.4 | — | ≥38.5 | — |
 | **SpO2** (%)\* | ≤91 | 92–93 | 94–95 | ≥96 | — | — | — |
 
-\*SpO2 scoring based on ViEWS (Prytherch et al., 2010)
+> *Note: MEWS thresholds vary across implementations. This table represents our adapted 
+scoring based on Subbe et al. (2001) with SpO2 integration from ViEWS (Prytherch et al., 2010).*
 
 ## Technology Stack
 
@@ -343,7 +332,7 @@ MIT License. See [LICENSE](LICENSE) file for details.
 
 Andersen, L. W., Holmberg, M. J., Berg, K. M., Donnino, M. W., & Granfeldt, A. (2019). In-hospital cardiac arrest: A review. *JAMA, 321*(12), 1200–1210. https://doi.org/10.1001/jama.2019.1696
 
-Hamilton, S., Mion, L. C., & DePew, D. D. (1995). ICU and non-ICU cost per day. *Canadian Journal of Anaesthesia, 42*(3), 192–196. https://doi.org/10.1007/BF03010674
+Churpek, M. M., Adhikari, R., & Edelson, D. P. (2018). Multicenter derivation and validation of an early warning score for acute respiratory failure or death in the hospital. *Critical Care, 22*(1), 286. https://doi.org/10.1186/s13054-018-2229-8
 
 Johnson, A. E. W., Bulgarelli, L., Shen, L., Gayles, A., Shammber, A., Horng, S., Pollard, T. J., Hao, S., Moody, B., Gow, B., Lehman, L.-W. H., Celi, L. A., & Mark, R. G. (2023). MIMIC-IV, a freely accessible electronic health record dataset. *Scientific Data, 10*, Article 1. https://doi.org/10.1038/s41597-022-01899-x
 
