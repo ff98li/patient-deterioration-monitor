@@ -1,121 +1,73 @@
 # Real-Time Patient Deterioration Prediction System
-**AI Partner Catalyst: Confluent Challenge**
+![Project banner](assets/banner.svg)
 
-*A real-time clinical decision support system for critical care that predicts patient deterioration using real-time streaming vital signs and laboratory data, powered by Confluent Cloud, Apache Kafka and Google Cloud Vertex AI.*
+**AI Partner Catalyst Hackathon: Confluent Challenge**
+
+*A real-time clinical decision support system that predicts patient deterioration using streaming vital signs and laboratory data, powered by Confluent Kafka, Google Cloud, and Vertex AI.*
+
+## Table of Contents
+- [Project Overview](#project-overview)
+  - [The Challenge: Preventable In-Hospital Deterioration](#the-challenge-preventable-in-hospital-deterioration)
+  - [Our Solution](#our-solution)
+- [Architecture](#architecture)
+- [Key Features](#key-features)
+  - [1. Multi-Stream Processing with Confluent Kafka](#1-multi-stream-processing-with-confluent-kafka)
+  - [2. Clinical Scoring (MEWS)](#2-clinical-scoring-mews)
+  - [3. Zero-Shot LLM Advantage](#3-zero-shot-llm-advantage)
+  - [4. Confidence-Aware AI Assessment](#4-confidence-aware-ai-assessment)
+  - [5. Alert Fatigue Mitigation](#5-alert-fatigue-mitigation)
+  - [6. Real-Time Dashboard](#6-real-time-dashboard)
+- [Clinical Scoring Methodology](#clinical-scoring-methodology)
+  - [MEWS Scoring Thresholds](#mews-scoring-thresholds)
+- [Technology Stack](#technology-stack)
+- [Dataset](#dataset)
+  - [MIMIC-IV (PhysioNet)](#mimic-iv-physionet)
+  - [Measurement Frequency (Real ICU Patterns)](#measurement-frequency-real-icu-patterns)
+- [Local Development Setup](#local-development-setup)
+  - [Prerequisites](#prerequisites)
+  - [Backend Setup](#backend-setup)
+  - [Frontend Setup](#frontend-setup)
+  - [Running Locally](#running-locally)
+- [Project Structure](#project-structure)
+- [Background \& Clinical Rationale](#background--clinical-rationale)
+  - [The "80%" Reality](#the-80-reality)
+  - [The 6-8 Hour Window](#the-6-8-hour-window)
+  - [Economic Impact](#economic-impact)
+- [Future Enhancements](#future-enhancements)
+- [Acknowledgments](#acknowledgments)
+- [License](#license)
+- [References](#references)
+
+
+## Live Demo
+
+| Component | URL |
+|-----------|-----|
+| **Dashboard** | [https://icu.ffli.dev](https://icu.ffli.dev) |
+| **API** | [https://patient-deterioration-monitor.ffli.dev](https://patient-deterioration-monitor.ffli.dev) |
 
 ## Project Overview
 This project addresses the critical "failure to rescue" gap in modern inpatient care. Despite the abundance of physiological data in hospitals, In-Hospital Cardiac Arrest (IHCA) remains a leading cause of preventable mortality. This system transitions monitoring from reactive, batch-based analysis to a Real-Time, Multimodal Streaming Intelligence platform capable of detecting patient deterioration hours before a critical event.
 
-## Background & Clinical Rationale
-### The "80%" Reality
-Current clinical literature establishes that cardiac arrest is rarely a sudden, unpredictable event. Research consistently demonstrates that 80% of in-hospital cardiac arrests are preceded by identifiable physiological warning signs, known as clinical antecedents (Schein et al., 1990). These signs typically manifest as progressive instability in respiratory rate, heart rate, or blood pressure, often occurring alongside subtle changes in mental status (Hillman et al., 2001).
-
-### The 6-8 Hour Window
-Crucially, these warning signs are detectable for an average of 6 to 8 hours prior to the terminal event (Schein et al., 1990; Hillman et al., 2001). This creates a significant "window of opportunity" for early intervention. However, traditional intermittent nursing checks (typically every 4-8 hours) frequently miss this window, leading to reactive "Code Blue" responses rather than proactive care (Kwon et al., 2018).
-
-### Economic Impact
-The cost of missing this window is severe. Intensive Care Unit (ICU) transfers triggered by late-stage deterioration are significantly more expensive than early interventions delivered on the ward. Studies indicate that the direct costs per day for ICU survivors can be 6 to 7 times higher than for non-ICU care (Hamilton et al., 1995). Furthermore, complications arising from delayed detection, such as Acute Kidney Injury (AKI) or hospital-acquired infections, can increase mortality risk by 3-5 times and add substantially to the cost per episode (Observe Medical, 2021). By preventing unplanned ICU admissions, this system aims to reduce length of stay and alleviate capacity constraints ("bed blocking").
-
-## System Goals
-1. **Ingest High-Velocity Data:** Handle continuous waveforms (ECG, PPG) at scale, moving beyond static tabular vitals (Omer, 2025).
-
-2. **Reduce Latency:** Shift from batch processing (which can incur 12-24h delays) to stream processing (<1s latency) to capture rapid deterioration within the actionable window (Omer, 2025).
-
-3. **Minimize False Alarms:** Utilize Multimodal AI (Waveforms + Clinical Text + Vitals) to improve specificity and reduce alert fatigue, a critical failure point of previous generation systems (Kwon et al., 2018).
-
-
-
-
----
-
-## Problem Statement
-
 ### The Challenge: Preventable In-Hospital Deterioration
 
-- **80% of cardiac arrests** show warning signs 6-8 hours before the event
-- **Each hour of delayed intervention** increases ICU mortality by 1.5%
-- **Alert fatigue** plagues existing systems — PPV as low as 6% means 94 false alarms per 6 true alerts
-- **ICU costs 2.8x more** than ward care ($4,186/day vs $1,492/day)
+- **80% of cardiac arrests** show warning signs 6-8 hours before the event (Schein et al., 1990)
+- **Alert fatigue** plagues existing systems — positive predictive value (PPV) as low as 6% in some early warning systems (Hillman et al., 2001)
+- **ICU costs significantly more** than ward care, with direct costs 6-7 times higher for ICU survivors (Hamilton et al., 1995)
 
 ### Our Solution
 
 A streaming analytics platform that:
-1. Ingests real-time vital signs and lab results via Confluent Kafka
+1. Ingests real-time vital signs and lab results via **Confluent Kafka**
 2. Calculates validated clinical scores (MEWS) in real-time
-3. Uses Vertex AI Gemini for zero-shot clinical interpretation
+3. Uses **Vertex AI Gemini** for zero-shot clinical interpretation
 4. Reduces false alarms through trend-based alert confirmation
-5. Provides confidence-aware AI assessments
-
----
+5. Provides confidence-aware AI assessments with uncertainty quantification
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              DATA SOURCES                                    │
-│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐          │
-│  │  Vital Signs    │    │  Lab Results    │    │  [Future]       │          │
-│  │  (MIMIC-IV)     │    │  (MIMIC-IV)     │    │  Chest X-rays   │          │
-│  └────────┬────────┘    └────────┬────────┘    └─────────────────┘          │
-└───────────┼──────────────────────┼──────────────────────────────────────────┘
-            │                      │
-            ▼                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         CONFLUENT KAFKA                                      │
-│  ┌─────────────────┐    ┌─────────────────┐                                 │
-│  │ patient-vitals  │    │  patient-labs   │                                 │
-│  │     topic       │    │     topic       │                                 │
-│  └────────┬────────┘    └────────┬────────┘                                 │
-│           │                      │                                          │
-│           └──────────┬───────────┘                                          │
-│                      │                                                      │
-│              ┌───────▼───────┐                                              │
-│              │ Multi-Stream  │  ← Stream JOIN by patient (stay_id)          │
-│              │   Consumer    │  ← Temporal alignment & staleness detection  │
-│              └───────┬───────┘                                              │
-└──────────────────────┼──────────────────────────────────────────────────────┘
-                       │
-                       ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                      PROCESSING & ANALYSIS                                   │
-│                                                                             │
-│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐          │
-│  │  MEWS Score     │    │  Lab Analysis   │    │ Sepsis Screening│          │
-│  │  Calculator     │    │  Engine         │    │ Cross-correlation│         │
-│  └────────┬────────┘    └────────┬────────┘    └────────┬────────┘          │
-│           │                      │                      │                   │
-│           └──────────────────────┼──────────────────────┘                   │
-│                                  │                                          │
-│                      ┌───────────▼───────────┐                              │
-│                      │  Alert Confirmation   │                              │
-│                      │  (Trend-based)        │                              │
-│                      └───────────┬───────────┘                              │
-└──────────────────────────────────┼──────────────────────────────────────────┘
-                                   │
-                                   ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                      VERTEX AI (Gemini 2.5 Flash)                           │
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────┐            │
-│  │  Zero-Shot Clinical Interpretation                          │            │
-│  │  • Confidence-aware assessment (LOW/MEDIUM/HIGH)            │            │
-│  │  • Priority concerns identification                         │            │
-│  │  • Recommended actions                                      │            │
-│  │  • Uncertainty quantification                               │            │
-│  └─────────────────────────────────────────────────────────────┘            │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                   │
-                                   ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           OUTPUT                                            │
-│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐          │
-│  │  Real-time      │    │  REST API       │    │  Alert System   │          │
-│  │  Dashboard      │    │  (Flask)        │    │  (Confirmed)    │          │
-│  └─────────────────┘    └─────────────────┘    └─────────────────┘          │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+![Architecture Diagram](assets/architecture.svg)
 
----
 
 ## Key Features
 
@@ -139,6 +91,8 @@ Modified Early Warning Score calculation with risk stratification:
 | 4-5 | HIGH | Urgent clinical review |
 | ≥6 | CRITICAL | Immediate intervention |
 
+> See [Clinical Scoring Methodology](#clinical-scoring-methodology) section for details on our modified scoring protocol.
+
 ### 3. Zero-Shot LLM Advantage
 
 **Key Differentiator**: No training data required.
@@ -150,6 +104,7 @@ Modified Early Warning Score calculation with risk stratification:
 
 ### 4. Confidence-Aware AI Assessment
 
+The system provides transparent uncertainty quantification. Example Output:
 ```
 AI Assessment (Confidence: 🟡 MEDIUM):
   The patient presents with severe hypotension and multi-organ 
@@ -172,37 +127,74 @@ AI Assessment (Confidence: 🟡 MEDIUM):
 - Prevents false alarms from transient spikes
 - Maintains sensitivity while improving specificity
 
----
+### 6. Real-Time Dashboard
+
+- Live patient monitoring with risk-sorted display
+- Search and filter by patient ID, risk level, confidence
+- Pagination for managing large patient populations (500 patients)
+- Interactive trend charts with historical data
+- Alert feed with acknowledgment workflow
+
+## Clinical Scoring Methodology
+
+This system implements a **Modified MEWS with SpO2**, combining:
+
+1. **Core MEWS parameters** (Subbe et al., 2001): Heart rate, respiratory rate, 
+   systolic blood pressure, and temperature thresholds
+   - Original 5-parameter score: HR, RR, SBP, Temperature, AVPU
+   - MEWS ≥5 associated with increased mortality (OR 5.4) and ICU admission (OR 10.9)
+
+2. **SpO2 scoring** (Prytherch et al., 2010 — ViEWS): Oxygen saturation thresholds 
+   adapted from the VitalPAC Early Warning Score
+   - AUROC 0.888 for 24-hour mortality prediction
+   - Basis for UK National Early Warning Score (NEWS)
+
+This hybrid approach is appropriate for ICU monitoring where continuous SpO2 data is available, enhancing the original MEWS with respiratory status assessment.
+
+### MEWS Scoring Thresholds
+
+| Parameter | Score 3 | Score 2 | Score 1 | Score 0 | Score 1 | Score 2 | Score 3 |
+|-----------|:-------:|:-------:|:-------:|:-------:|:-------:|:-------:|:-------:|
+| **RR** (/min) | — | <9 | — | 9–14 | 15–20 | 21–29 | ≥30 |
+| **HR** (bpm) | — | ≤40 | 41–50 | 51–100 | 101–110 | 111–129 | ≥130 |
+| **SBP** (mmHg) | ≤70 | 71–80 | 81–100 | 101–199 | — | ≥200 | — |
+| **Temp** (°C) | — | <35 | — | 35–38.4 | — | ≥38.5 | — |
+| **SpO2** (%)\* | ≤91 | 92–93 | 94–95 | ≥96 | — | — | — |
+
+\*SpO2 scoring based on ViEWS (Prytherch et al., 2010)
 
 ## Technology Stack
 
 | Component | Technology |
 |-----------|------------|
-| **Streaming Platform** | Confluent Kafka (Cloud) |
-| **AI/ML** | Google Vertex AI (Gemini 2.5 Flash) |
-| **Data Source** | MIMIC-IV (BigQuery) |
-| **Backend** | Python, Flask |
-| **Dashboard** | HTML/JS (real-time updates) |
-| **Cloud** | Google Cloud Platform |
+| **Streaming Platform** | Confluent Cloud (Apache Kafka) |
+| **AI/ML** | Google Cloud Vertex AI (Gemini 2.5 Flash) |
+| **Compute** | Google Compute Engine (GCE) |
+| **Frontend Hosting** | Google Cloud Run |
+| **Load Balancing** | GCP Load Balancer + Managed SSL |
+| **Backend API** | Python Flask + Flask-CORS |
+| **Frontend** | React + TypeScript + Tailwind CSS + Recharts |
+| **Data Source** | MIMIC-IV (via BigQuery) |
 
----
 
-## Data Pipeline
+## Dataset
 
-### Vital Signs (266K records, 500 patients)
+### MIMIC-IV (PhysioNet)
+Real de-identified ICU patient data from Beth Israel Deaconess Medical Center (Johnson et al., 2023).
+
+**Vital Signs (266K records, 500 patients)**
 - Heart Rate, Respiratory Rate, SpO2
-- Systolic BP, Diastolic BP, MAP
+- Systolic BP, Diastolic BP
 - Temperature
 
-### Laboratory Results (25K records)
+**Laboratory Results (25K records)**
 - Lactate (sepsis marker)
-- Creatinine (kidney function)
+- Creatinine (kidney function)  
 - WBC (infection indicator)
-- Hemoglobin, Platelets
-- Electrolytes (K, Na, Cl, HCO3)
-- Glucose
+- Potassium (electrolyte balance)
 
 ### Measurement Frequency (Real ICU Patterns)
+
 | Vital | Frequency | Method |
 |-------|-----------|--------|
 | HR, SpO2 | Continuous | Bedside monitor |
@@ -210,109 +202,103 @@ AI Assessment (Confidence: 🟡 MEDIUM):
 | Blood Pressure | 15-60 min | Cuff/arterial line |
 | Temperature | 2-4 hours | Manual |
 
----
-
-## Installation & Setup
+## Local Development Setup
 
 ### Prerequisites
 - Python 3.11+
+- Node.js 18+
 - Confluent Cloud account
 - Google Cloud account with Vertex AI enabled
-- MIMIC-IV BigQuery access (PhysioNet credentialing)
+- MIMIC-IV BigQuery access (PhysioNet credentialing required)
 
-### Environment Setup
+### Backend Setup
 
 ```bash
 # Clone repository
-git clone <repository-url>
-cd patient-monitoring
+git clone https://github.com/ff98li/patient-deterioration-monitor.git
+cd patient-deterioration-monitor
+
+# Create virtual environment
+python3.11 -m venv venv
+source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
 
 # Configure credentials
 cp config.example.py config.py
-# Edit config.py with your credentials
+# Edit config.py with your Confluent and GCP credentials
 ```
 
-### Configuration (config.py)
-
-```python
-# Confluent Kafka
-CONFLUENT_BOOTSTRAP_SERVER = "your-cluster.confluent.cloud:9092"
-CONFLUENT_API_KEY = "your-api-key"
-CONFLUENT_API_SECRET = "your-api-secret"
-
-# Google Cloud
-GCP_PROJECT_ID = "your-project-id"
-GCP_REGION = "us-central1"
-
-# Thresholds
-ALERT_THRESHOLD = 4
-KAFKA_TOPIC = "patient-vitals"
-```
-
-### Running the System
+### Frontend Setup
 
 ```bash
-# Terminal 1: Dashboard
-python dashboard.py
-
-# Terminal 2: Multi-stream Consumer
-python consumer_multistream.py
-
-# Terminal 3: Vitals Producer
-python producer.py
-
-# Terminal 4: Labs Producer
-python lab_producer.py
+cd dashboard
+npm install
 ```
 
-Access dashboard at: `http://localhost:5050`
+### Running Locally
 
----
+```bash
+# Terminal 1: Consumer + API
+python run_combined.py
+
+# Terminal 2: Vitals Producer
+python vitals_producer_continuous.py
+
+# Terminal 3: Labs Producer
+python lab_producer_continuous.py
+
+# Terminal 4: Dashboard (development)
+cd dashboard
+npm run dev
+```
+
+Access dashboard at: `http://localhost:3000`
 
 ## Project Structure
 
 ```
-patient-monitoring/
-├── config.py                 # Configuration & credentials
-├── producer.py               # Vital signs Kafka producer
-├── lab_producer.py           # Lab results Kafka producer
-├── consumer.py               # Single-stream consumer
-├── consumer_multistream.py   # Multi-stream consumer (vitals + labs)
-├── model.py                  # MEWS calculation & AI interpretation
-├── lab_analysis.py           # Lab analysis & sepsis screening
-├── dashboard.py              # Flask web dashboard
-├── shared_state.py           # Shared state management
-├── data/
-│   ├── patient_vitals.csv    # 266K vital sign records
-│   └── patient_labs.csv      # 25K lab result records
-└── requirements.txt
+patient-deterioration-monitor/
+├── config.example.py              # Configuration template
+├── run_combined.py                # Combined consumer + API server
+├── vitals_producer_continuous.py  # BigQuery-based Vital signs Kafka producer
+├── lab_producer_continuous.py     # BigQuery-based Lab results Kafka producer
+├── consumer_multistream.py        # Multi-stream Kafka consumer
+├── model.py                       # MEWS calculation & Vertex AI integration
+├── lab_analysis.py                # Lab analysis & sepsis screening
+├── dashboard_api.py               # Flask REST API
+├── shared_state.py                # Thread-safe state management
+├── requirements.txt               # Python dependencies
+│
+├── dashboard/                     # React Frontend
+│   ├── App.tsx                    # Main application component
+│   ├── components/
+│   │   ├── PatientCard.tsx        # Patient summary card
+│   │   ├── PatientDetailModal.tsx # Detailed patient view
+│   │   ├── AlertFeed.tsx          # Real-time alerts
+│   │   ├── RiskChart.tsx          # Risk distribution chart
+│   │   └── StatCard.tsx           # Statistics cards
+│   ├── services/
+│   │   └── apiService.ts          # API client
+│   ├── Dockerfile                 # Cloud Run deployment
+│   └── nginx.conf                 # Nginx configuration
+│
+└── BigQuery/                      # SQL extraction scripts
+    ├── extract_vitals.sql
+    └── extract_labs.sql
 ```
 
----
+## Background & Clinical Rationale
+### The "80%" Reality
+Current clinical literature establishes that cardiac arrest is rarely a sudden, unpredictable event. Research consistently demonstrates that 80% of in-hospital cardiac arrests are preceded by identifiable physiological warning signs, known as clinical antecedents (Schein et al., 1990). These signs typically manifest as progressive instability in respiratory rate, heart rate, or blood pressure, often occurring alongside subtle changes in mental status (Hillman et al., 2001).
 
-## Clinical Validation
+### The 6-8 Hour Window
+Crucially, these warning signs are detectable for an average of 6 to 8 hours prior to the terminal event (Schein et al., 1990; Hillman et al., 2001). This creates a significant "window of opportunity" for early intervention. However, traditional intermittent nursing checks (typically every 4-8 hours) frequently miss this window, leading to reactive "Code Blue" responses rather than proactive care (Kwon et al., 2018).
 
-### MEWS Scoring
-Based on validated Modified Early Warning Score:
-- Subbe et al. (2001) - Original MEWS validation
-- Demonstrated correlation with cardiac arrest, ICU admission, mortality
+### Economic Impact
+The cost of missing this window is severe. Intensive Care Unit (ICU) transfers triggered by late-stage deterioration are significantly more expensive than early interventions delivered on the ward. Studies indicate that the direct costs per day for ICU survivors can be 6 to 7 times higher than for non-ICU care (Hamilton et al., 1995). Furthermore, complications arising from delayed detection, such as Acute Kidney Injury (AKI) or hospital-acquired infections, can increase mortality risk by 3-5 times and add substantially to the cost per episode (Observe Medical, 2021). By preventing unplanned ICU admissions, this system aims to reduce length of stay and alleviate capacity constraints ("bed blocking").
 
-### Sepsis Screening
-Cross-correlates vitals and labs for sepsis indicators:
-- Elevated lactate (>2 mmol/L)
-- WBC abnormality (<4 or >12 K/uL)
-- Tachycardia, tachypnea, hypotension
-- Thrombocytopenia
-
-### Literature Support
-- Schein et al. (1990): 84% of arrests have warning signs 8hrs before
-- Young et al. (2003): ≥4hr intervention delay = 3.5x mortality
-- Kyeremanteng et al. (2018): ICU costs 2.8x ward costs
-
----
 
 ## Future Enhancements
 
@@ -322,52 +308,30 @@ Cross-correlates vitals and labs for sepsis indicators:
 4. **Federated Learning**: Multi-hospital deployment without data sharing
 5. **Alert Acknowledgment**: Clinician feedback loop for continuous improvement
 
----
-
 ## Acknowledgments
 
-- MIMIC-IV dataset (PhysioNet)
-- Confluent for streaming infrastructure
-- Google Cloud for Vertex AI platform
-
----
-
-# References
-Hamilton, S., et al. (1995). ICU and non-ICU cost per day. Canadian Journal of Anaesthesia, 42(3), 192–196.
-
-Hillman, K., et al. (2001). Redefining in-hospital resuscitation: the concept of the medical emergency team. Resuscitation, 48(2), 105–110.
-
-Johnson, A.E.W., et al. (2023). MIMIC-IV, a freely accessible electronic health record dataset. Sci Data 10, 1.
-
-Kwon, J. M., et al. (2018). An Algorithm Based on Deep Learning for Predicting In-Hospital Cardiac Arrest. Journal of the American Heart Association, 7(13), e008678.
-
-Observe Medical ASA. (2021). Third quarter 2021 presentation. Retrieved from Observe Medical Investor Relations.
-
-Omer, R. (2025). Real-Time & Streaming Analytics in Healthcare: Use Cases & Architecture. Embarking on Voyage.
-
-Schein, R. M., et al. (1990). Clinical antecedents to in-hospital cardiopulmonary arrest. Chest, 98(6), 1388–1392.
-
+- **MIMIC-IV Dataset** — PhysioNet / Beth Israel Deaconess Medical Center
+- **Confluent** — Streaming infrastructure and hackathon sponsorship
+- **Google Cloud** — Vertex AI platform and cloud infrastructure
 
 ## License
 
-MIT License
+MIT License. See [LICENSE](LICENSE) file for details.
 
-Copyright (c) 2025 Feifei
+## References
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Hamilton, S., Mion, L. C., & DePew, D. D. (1995). ICU and non-ICU cost per day. *Canadian Journal of Anaesthesia, 42*(3), 192–196. https://doi.org/10.1007/BF03010674
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Hillman, K., Bristow, P., Chey, T., Daffurn, K., Jacques, T., Norman, S., Bishop, G., & Simmons, G. (2001). Antecedents to hospital deaths. *Internal Medicine Journal, 31*(6), 343–348. https://doi.org/10.1046/j.1445-5994.2001.00077.x
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Johnson, A. E. W., Bulgarelli, L., Shen, L., Gayles, A., Shammber, A., Horng, S., Pollard, T. J., Hao, S., Moody, B., Gow, B., Lehman, L.-W. H., Celi, L. A., & Mark, R. G. (2023). MIMIC-IV, a freely accessible electronic health record dataset. *Scientific Data, 10*, Article 1. https://doi.org/10.1038/s41597-022-01899-x
+
+Kwon, J. M., Lee, Y., Lee, Y., Lee, S., & Park, J. (2018). An algorithm based on deep learning for predicting in-hospital cardiac arrest. *Journal of the American Heart Association, 7*(13), Article e008678. https://doi.org/10.1161/JAHA.118.008678
+
+Observe Medical ASA. (2021). *Third quarter 2021 presentation*. Observe Medical Investor Relations.
+
+Prytherch, D. R., Smith, G. B., Schmidt, P. E., & Featherstone, P. I. (2010). ViEWS—Towards a national early warning score for detecting adult inpatient deterioration. *Resuscitation, 81*(8), 932–937. https://doi.org/10.1016/j.resuscitation.2010.04.014
+
+Schein, R. M., Hazday, N., Pena, M., Ruben, B. H., & Sprung, C. L. (1990). Clinical antecedents to in-hospital cardiopulmonary arrest. *Chest, 98*(6), 1388–1392. https://doi.org/10.1378/chest.98.6.1388
+
+Subbe, C. P., Kruger, M., Rutherford, P., & Gemmel, L. (2001). Validation of a modified Early Warning Score in medical admissions. *QJM: An International Journal of Medicine, 94*(10), 521–526. https://doi.org/10.1093/qjmed/94.10.521
