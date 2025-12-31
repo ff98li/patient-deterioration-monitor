@@ -573,7 +573,8 @@ def consume_multistream(consumer: Consumer):
                             'mews_score': mews_score,
                             'vitals': vitals,
                             'has_labs': combined.get('labs') is not None,
-                            'message': f"MEWS score {mews_score} indicates {risk_level} risk",
+                            #'message': f"MEWS score {mews_score} indicates {risk_level} risk",
+                            'message': f"Combined assessment: {risk_level} risk (MEWS: {mews_score})",
                             'timestamp': result['timestamp'],
                             'triggered_at': datetime.now(UTC).isoformat()
                         }
