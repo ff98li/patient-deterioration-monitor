@@ -82,7 +82,7 @@ const App: React.FC = () => {
           setAlerts(prev => {
             const existingIds = new Set(prev.map(a => a.id));
             const newAlerts = data.alerts.filter(a => !existingIds.has(a.id));
-            return [...newAlerts, ...prev].slice(0, 50);
+            return [...newAlerts, ...prev].slice(0, 1000);
           });
         }
         
@@ -95,7 +95,7 @@ const App: React.FC = () => {
         setPatients(mockData.patients);
         setStats(mockData.stats);
         if (mockData.newAlert) {
-          setAlerts(prev => [mockData.newAlert!, ...prev].slice(0, 50));
+          setAlerts(prev => [mockData.newAlert!, ...prev].slice(0, 1000));
         }
       }
     } else {
@@ -104,7 +104,7 @@ const App: React.FC = () => {
       setPatients(mockData.patients);
       setStats(mockData.stats);
       if (mockData.newAlert) {
-        setAlerts(prev => [mockData.newAlert!, ...prev].slice(0, 50));
+        setAlerts(prev => [mockData.newAlert!, ...prev].slice(0, 1000));
       }
     }
     setCurrentTime(new Date());
