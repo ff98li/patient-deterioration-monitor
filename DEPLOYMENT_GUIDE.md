@@ -4,8 +4,12 @@
 
 This guide deploys the Patient Deterioration Monitor to Google Cloud Platform:
 - **GCE VM**: Runs Kafka producers, consumer, and Flask API
-- **Firebase Hosting**: Serves the React dashboard
+- **Cloud Run**: Serves the React dashboard (alternative: Firebase Hosting)
 - **Confluent Cloud**: Kafka streaming (already set up)
+
+**Live URLs (after deployment):**
+- Dashboard: `https://icu.ffli.dev`
+- API: `https://patient-deterioration-monitor.ffli.dev`
 
 ---
 
@@ -14,14 +18,18 @@ This guide deploys the Patient Deterioration Monitor to Google Cloud Platform:
 ### 1.1 Create the VM
 
 ```bash
+# Set your preferred zone (use consistently throughout)
+export GCP_ZONE="us-central1-a"
+
 # Create VM instance
 gcloud compute instances create patient-monitor-vm \
-  --zone=us-central1-c \
+  --zone=$GCP_ZONE \
   --machine-type=e2-medium \
   --image-family=ubuntu-2204-lts \
   --image-project=ubuntu-os-cloud \
   --boot-disk-size=20GB \
-  --tags=http-server,https-server
+  --tags=http-server,https-server \
+  --scopes=cloud-platform
 
 # Allow traffic on port 5050
 gcloud compute firewall-rules create allow-api-5050 \
@@ -33,7 +41,7 @@ gcloud compute firewall-rules create allow-api-5050 \
 ### 1.2 SSH into the VM
 
 ```bash
-gcloud compute ssh patient-monitor-vm --zone=us-central1-a
+gcloud compute ssh patient-monitor-vm --zone=$GCP_ZONE
 ```
 
 ### 1.3 Install Dependencies
@@ -45,363 +53,292 @@ sudo apt update && sudo apt upgrade -y
 # Install Python 3.11
 sudo apt install -y python3.11 python3.11-venv python3-pip git
 
-# Create project directory
-mkdir -p ~/patient-monitoring
-cd ~/patient-monitoring
-
-# Create virtual environment
-python3 -m venv venv
+# Create virtual environment (use python3.11 explicitly)
+python3.11 -m venv venv
 source venv/bin/activate
+
+# Verify Python version
+python --version  # Should show Python 3.11.x
 ```
 
-### 1.4 Upload Project Files
-
-From your local machine:
-```bash
-# Zip the project
-cd ~/patient-monitoring
-zip -r patient-monitoring.zip . -x "venv/*" -x "__pycache__/*" -x "*.pyc" -x "dashboard/node_modules/*"
-
-# Upload to VM
-gcloud compute scp patient-monitoring.zip patient-monitor-vm:~/patient-monitoring/ --zone=us-central1-a
-```
+### 1.4 Clone Project Repository
 
 On the VM:
 ```bash
-cd ~/patient-monitoring
-unzip patient-monitoring.zip
+cd ~
+git clone https://github.com/ff98li/patient-deterioration-monitor.git
 ```
 
 ### 1.5 Install Python Dependencies
 
 ```bash
+cd ~/patient-deterioration-monitor
 source venv/bin/activate
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 1.6 Upload Data Files
+### 1.6 Set Up Google Cloud Credentials
 
-From your local machine:
+For Vertex AI access, set up application default credentials on the VM:
+
 ```bash
-# Upload data files
-gcloud compute scp data/patient_vitals_500.csv patient-monitor-vm:~/patient-monitoring/data/ --zone=us-central1-a
-gcloud compute scp data/patient_labs_500.csv patient-monitor-vm:~/patient-monitoring/data/ --zone=us-central1-a
+# On the VM
+gcloud auth application-default login
+```
+
+Or upload a service account key:
+```bash
+# From local machine
+gcloud compute scp path/to/service-account-key.json patient-monitor-vm:~/patient-deterioration-monitor/ --zone=$GCP_ZONE
+
+# On VM, set environment variable
+echo 'export GOOGLE_APPLICATION_CREDENTIALS=~/patient-deterioration-monitor/service-account-key.json' >> ~/.bashrc
+source ~/.bashrc
 ```
 
 ### 1.7 Set Up Config
 
 Create `config.py` on the VM with your credentials:
+
+Content:
 ```python
 # Confluent Cloud
 CONFLUENT_BOOTSTRAP_SERVER = "your-server.confluent.cloud:9092"
 CONFLUENT_API_KEY = "your-api-key"
 CONFLUENT_API_SECRET = "your-api-secret"
-KAFKA_TOPIC = "patient-vitals"
+
+# Kafka Topics
+KAFKA_VITALS_TOPIC = "patient-vitals"
+KAFKA_LABS_TOPIC = "patient-labs"
 
 # GCP
 GCP_PROJECT_ID = "your-project-id"
 GCP_REGION = "us-central1"
 
+# Vertex AI
+VERTEX_AI_MODEL = "gemini-2.5-flash"
+
 # Alert settings
 ALERT_THRESHOLD = 3
+
+# API settings
+API_HOST = "0.0.0.0"
+API_PORT = 5050
 ```
 
-### 1.8 Test the Setup
+### 1.9 Test the Setup
 
 ```bash
+cd ~/patient-deterioration-monitor
+source venv/bin/activate
+
 # Test API starts
 python run_combined.py &
 
-# Test from another terminal
+# Test from another terminal (or use curl in same terminal after Ctrl+C)
 curl http://localhost:5050/
+
+# Stop the test
+pkill -f run_combined.py
 ```
 
----
+# Part 2: Run Backend Services (Revised)
 
-## Part 2: Run as Background Services
+## Using Screen Sessions
 
-### 2.1 Create systemd Service for Combined Consumer + API
+### 2.1 Install Screen (if not already installed)
 
 ```bash
-sudo nano /etc/systemd/system/patient-monitor-api.service
+sudo apt install -y screen
 ```
 
-Content:
-```ini
-[Unit]
-Description=Patient Monitor API and Consumer
-After=network.target
-
-[Service]
-Type=simple
-User=ubuntu
-WorkingDirectory=/home/ubuntu/patient-monitoring
-Environment=PATH=/home/ubuntu/patient-monitoring/venv/bin
-ExecStart=/home/ubuntu/patient-monitoring/venv/bin/python run_combined.py
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-```
-
-### 2.2 Create Service for Vitals Producer
+### 2.2 Start API + Consumer
 
 ```bash
-sudo nano /etc/systemd/system/patient-monitor-vitals.service
+# Create a new screen session
+screen -S api
+
+# Inside the screen session
+cd ~/patient-deterioration-monitor
+source venv/bin/activate
+python run_combined.py
+
+# Detach from screen: press Ctrl+A, then D
 ```
 
-Content:
-```ini
-[Unit]
-Description=Patient Monitor Vitals Producer
-After=network.target patient-monitor-api.service
-
-[Service]
-Type=simple
-User=ubuntu
-WorkingDirectory=/home/ubuntu/patient-monitoring
-Environment=PATH=/home/ubuntu/patient-monitoring/venv/bin
-ExecStart=/home/ubuntu/patient-monitoring/venv/bin/python producer.py
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-```
-
-### 2.3 Create Service for Labs Producer
+### 2.3 Start Vitals Producer
 
 ```bash
-sudo nano /etc/systemd/system/patient-monitor-labs.service
+# Create a new screen session
+screen -S vitals
+
+# Inside the screen session
+cd ~/patient-deterioration-monitor
+source venv/bin/activate
+python vitals_producer_continuous.py
+
+# Detach from screen: press Ctrl+A, then D
 ```
 
-Content:
-```ini
-[Unit]
-Description=Patient Monitor Labs Producer
-After=network.target patient-monitor-api.service
-
-[Service]
-Type=simple
-User=ubuntu
-WorkingDirectory=/home/ubuntu/patient-monitoring
-Environment=PATH=/home/ubuntu/patient-monitoring/venv/bin
-ExecStart=/home/ubuntu/patient-monitoring/venv/bin/python lab_producer.py
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-```
-
-### 2.4 Enable and Start Services
+### 2.4 Start Labs Producer
 
 ```bash
-# Reload systemd
-sudo systemctl daemon-reload
+# Create a new screen session
+screen -S labs
 
-# Enable services to start on boot
-sudo systemctl enable patient-monitor-api
-sudo systemctl enable patient-monitor-vitals
-sudo systemctl enable patient-monitor-labs
+# Inside the screen session
+cd ~/patient-deterioration-monitor
+source venv/bin/activate
+python lab_producer_continuous.py
 
-# Start services
-sudo systemctl start patient-monitor-api
-sudo systemctl start patient-monitor-vitals
-sudo systemctl start patient-monitor-labs
-
-# Check status
-sudo systemctl status patient-monitor-api
-sudo systemctl status patient-monitor-vitals
-sudo systemctl status patient-monitor-labs
+# Detach from screen: press Ctrl+A, then D
 ```
 
-### 2.5 View Logs
+### 2.5 Screen Quick Reference
 
 ```bash
-# API logs
-sudo journalctl -u patient-monitor-api -f
+# List all screen sessions
+screen -ls
 
-# Vitals producer logs
-sudo journalctl -u patient-monitor-vitals -f
+# Reattach to a session
+screen -r api
+screen -r vitals
+screen -r labs
 
-# Labs producer logs
-sudo journalctl -u patient-monitor-labs -f
+# Detach from inside a session
+# Press Ctrl+A, then D
+
+# Kill a session (from inside)
+# Press Ctrl+C to stop script, then type 'exit'
 ```
 
 ### 2.6 Get VM External IP
 
 ```bash
 gcloud compute instances describe patient-monitor-vm \
-  --zone=us-central1-a \
+  --zone=$GCP_ZONE \
   --format='get(networkInterfaces[0].accessConfigs[0].natIP)'
 ```
 
 Test API externally:
 ```bash
-curl http://EXTERNAL_IP:5050/api/data
+curl http://EXTERNAL_IP:5050/
 ```
-
----
 
 ## Part 3: Deploy React Dashboard
 
-### 3.1 Update API URL
+#### 3.1 Update API URL
 
-In your local dashboard folder, update `.env.local`:
+In your local dashboard folder, create `.env.production`:
 ```bash
-VITE_API_URL=http://EXTERNAL_IP:5050
+VITE_API_URL=https://patient-deterioration-monitor.ffli.dev
 ```
 
-Or create `.env.production`:
-```bash
-VITE_API_URL=http://EXTERNAL_IP:5050
-```
-
-### 3.2 Build for Production
+#### 3.2 Build Docker Image
 
 ```bash
-cd ~/patient-monitoring/dashboard
-npm run build
+cd ~/patient-deterioration-monitor/dashboard
+
+# Build the image
+docker build -t gcr.io/YOUR_PROJECT_ID/patient-monitor-dashboard .
+
+# Push to Container Registry
+docker push gcr.io/YOUR_PROJECT_ID/patient-monitor-dashboard
 ```
 
-This creates a `dist/` folder with static files.
-
-### 3.3 Deploy to Firebase Hosting
+#### 3.3 Deploy to Cloud Run
 
 ```bash
-# Install Firebase CLI
-npm install -g firebase-tools
-
-# Login to Firebase
-firebase login
-
-# Initialize Firebase in dashboard folder
-cd ~/patient-monitoring/dashboard
-firebase init hosting
-
-# When prompted:
-# - Select your GCP project
-# - Public directory: dist
-# - Single-page app: Yes
-# - Don't overwrite index.html
-
-# Deploy
-firebase deploy --only hosting
-```
-
-### 3.4 Get Your Live URL
-
-After deployment, Firebase will show:
-```
-✓ Hosting URL: https://your-project-id.web.app
+gcloud run deploy patient-monitor-dashboard \
+  --image gcr.io/YOUR_PROJECT_ID/patient-monitor-dashboard \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated
 ```
 
 ---
 
-## Part 4: Verify Everything Works
+## Part 4: Set Up Custom Domain (Optional)
+
+### 4.1 API Domain with GCP Load Balancer
+
+For HTTPS on the API, set up a load balancer with managed SSL:
+
+```bash
+# Reserve static IP
+gcloud compute addresses create patient-monitor-api-ip --global
+
+# Create health check
+gcloud compute health-checks create http patient-monitor-health \
+  --port=5050 \
+  --request-path=/
+
+# Create backend service
+gcloud compute backend-services create patient-monitor-backend \
+  --protocol=HTTP \
+  --port-name=http \
+  --health-checks=patient-monitor-health \
+  --global
+
+# Create URL map
+gcloud compute url-maps create patient-monitor-lb \
+  --default-service=patient-monitor-backend
+
+# Create SSL certificate
+gcloud compute ssl-certificates create patient-monitor-cert \
+  --domains=patient-deterioration-monitor.ffli.dev \
+  --global
+
+# Create HTTPS proxy
+gcloud compute target-https-proxies create patient-monitor-https-proxy \
+  --url-map=patient-monitor-lb \
+  --ssl-certificates=patient-monitor-cert
+
+# Create forwarding rule
+gcloud compute forwarding-rules create patient-monitor-https-rule \
+  --address=patient-monitor-api-ip \
+  --global \
+  --target-https-proxy=patient-monitor-https-proxy \
+  --ports=443
+```
+
+### 4.2 Dashboard Domain
+
+For Cloud Run, map your custom domain in the Cloud Console under Cloud Run > Manage Custom Domains.
+
+---
+
+## Part 5: Verify Everything Works
 
 ### Checklist
 
-- [ ] VM is running
-- [ ] API responds: `curl http://EXTERNAL_IP:5050/`
-- [ ] Data endpoint works: `curl http://EXTERNAL_IP:5050/api/data`
-- [ ] Firebase URL loads the dashboard
+- [ ] VM is running: `gcloud compute instances list`
+- [ ] All services running: `sudo systemctl status patient-monitor-*`
+- [ ] API health check: `curl http://EXTERNAL_IP:5050/`
+- [ ] Patients endpoint: `curl http://EXTERNAL_IP:5050/api/patients`
+- [ ] Dashboard loads in browser
 - [ ] Dashboard shows real patient data (not demo mode)
-- [ ] Alerts appear in the feed
-- [ ] Patient detail modal works
+- [ ] Risk level filter works
+- [ ] Confidence filter works
+- [ ] Patient detail modal opens
+- [ ] AI assessment displays
+- [ ] Alert feed shows events
+- [ ] Confluent console shows messages flowing
 
 ---
 
 ## Troubleshooting
 
-### API not accessible externally
-```bash
-# Check firewall rule exists
-gcloud compute firewall-rules list | grep 5050
-
-# Check service is running
-sudo systemctl status patient-monitor-api
-
-# Check it's listening on 0.0.0.0
-sudo netstat -tlnp | grep 5050
-```
 
 ### CORS errors in browser
-Update `dashboard_api.py` to allow your Firebase domain:
+Update `dashboard_api.py` to allow your domain:
 ```python
 CORS(app, origins=[
     'http://localhost:5173',
     'http://localhost:3000',
+    'https://icu.ffli.dev',
     'https://your-project-id.web.app',
     'https://your-project-id.firebaseapp.com'
 ])
-```
-
-### Services not starting
-```bash
-# Check logs for errors
-sudo journalctl -u patient-monitor-api -n 50
-
-# Common issues:
-# - Wrong Python path in service file
-# - Missing dependencies
-# - Config file issues
-```
-
-### Producers finish and stop
-The producers will stop when they've sent all the data. For a continuous demo:
-- Modify producers to loop infinitely
-- Or use a larger dataset
-- Or restart them periodically
-
----
-
-## Optional: Loop Producers Continuously
-
-Modify `producer.py` to loop forever:
-
-```python
-# At the end of main(), wrap in while True:
-def main():
-    while True:
-        # ... existing producer code ...
-        print("Restarting producer from beginning...")
-        time.sleep(5)
-```
-
-Same for `lab_producer.py`.
-
----
-
-## Cost Estimate
-
-| Resource | Cost |
-|----------|------|
-| GCE e2-medium | ~$25/month |
-| Firebase Hosting | Free tier |
-| Confluent Cloud | Free tier (demo usage) |
-
-For the hackathon demo period (~1 week), cost should be < $10.
-
----
-
-## Quick Commands Reference
-
-```bash
-# SSH into VM
-gcloud compute ssh patient-monitor-vm --zone=us-central1-a
-
-# Restart all services
-sudo systemctl restart patient-monitor-api patient-monitor-vitals patient-monitor-labs
-
-# View all logs
-sudo journalctl -u patient-monitor-api -u patient-monitor-vitals -u patient-monitor-labs -f
-
-# Stop everything
-sudo systemctl stop patient-monitor-api patient-monitor-vitals patient-monitor-labs
-
-# Get external IP
-gcloud compute instances describe patient-monitor-vm --zone=us-central1-a --format='get(networkInterfaces[0].accessConfigs[0].natIP)'
 ```

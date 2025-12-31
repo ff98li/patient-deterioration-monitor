@@ -291,9 +291,9 @@ patient-deterioration-monitor/
 ### The "84%" Reality
 Current clinical literature establishes that cardiac arrest is rarely a sudden, 
 unpredictable event. Research demonstrates that 84% of in-hospital cardiac arrests 
-are preceded by documented clinical deterioration within eight hours of the event 
-(Schein et al., 1990). These signs typically manifest as progressive instability 
-in respiratory rate, heart rate, or blood pressure—70% of patients showed 
+are preceded by documented clinical deterioration within eight hours of the event.
+These signs typically manifest as progressive instability 
+in respiratory rate, heart rate, or blood pressure; 70% of patients showed 
 deterioration in respiratory or mental function prior to arrest (Schein et al., 1990).
 
 ### The 8-Hour Window
