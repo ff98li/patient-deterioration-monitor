@@ -320,9 +320,9 @@ and alleviate capacity constraints.
 
 ## Acknowledgments
 
-- **MIMIC-IV Dataset** — PhysioNet / Beth Israel Deaconess Medical Center
-- **Confluent** — Streaming infrastructure and hackathon sponsorship
-- **Google Cloud** — Vertex AI platform and cloud infrastructure
+- **MIMIC-IV Dataset:** PhysioNet / Beth Israel Deaconess Medical Center
+- **Confluent:** Streaming infrastructure and hackathon sponsorship
+- **Google Cloud:** Vertex AI platform and cloud infrastructure
 
 ## License
 
